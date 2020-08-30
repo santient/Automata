@@ -2,10 +2,12 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 class Cell():
-    def __init__(self, position, rules=[], state="alive", replacement=None):
+    def __init__(self, position, rules=[], state="alive", player=None, permanent=False, replacement=None):
         self.position = position
         self.rules = rules
         self.state = state
+        self.player = player
+        self.permanent = permanent
         self.replacement = replacement
 
     def step(self, board):
@@ -61,10 +63,10 @@ def condition_met(condition, board, position):
     positions = [(position[0] - 1, position[1]), (position[0] + 1, position[1]), (position[0], position[1] - 1), (position[0], position[1] + 1)]
     for p, c in zip(positions, condition):
         if c == "alive":
-            if not in_bounds(board, p) or board[p] is None:
+            if not in_bounds(board, p) or board[p] is None or board[p].state != "alive":
                 return False
         elif c == "dead":
-            if in_bounds(board, p) and board[p] is not None:
+            if in_bounds(board, p) and board[p] is not None and board[p].state == "alive":
                 return False
     return True
 
@@ -102,13 +104,13 @@ class Copy():
                     destination_position = (position[0], position[1] + 1)
                 if in_bounds(board, destination_position):
                     if board[destination_position] is None:
-                        board[destination_position] = Cell(destination_position, board[target_position].rules, "copy")
+                        board[destination_position] = Cell(destination_position, board[target_position].rules, "copy", board[position].player)
                     else:
                         if board[destination_position].state == "copy":
                             board[destination_position].state = "conflict"
                         elif board[destination_position].state in ["alive", "dead"]:
                             if board[destination_position].replacement is None:
-                                board[destination_position].replacement = Cell(destination_position, board[target_position].rules, "copy")
+                                board[destination_position].replacement = Cell(destination_position, board[target_position].rules, "copy", board[position].player)
                             else:
                                 board[destination_position].replacement.state = "conflict"
 
@@ -129,5 +131,5 @@ class Delete():
                 target_position = (position[0], position[1] - 1)
             elif self.target == "right":
                 target_position = (position[0], position[1] + 1)
-            if in_bounds(board, target_position) and board[target_position] is not None and board[target_position].state == "alive":
+            if in_bounds(board, target_position) and board[target_position] is not None and board[target_position].state == "alive" and not board[target_position].permanent:
                 board[target_position].state = "dead"
